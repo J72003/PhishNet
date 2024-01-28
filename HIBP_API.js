@@ -46,6 +46,7 @@ const updateExtensionData = async () => {
         const timeSinceLastUpdate = now - new Date(lastUpdateTime).getTime();
 
         if (isNaN(timeSinceLastUpdate) || timeSinceLastUpdate >= hoursBetweenUpdates * 60 * 60 * 1000) {
+            
             //Perform actions to update extension data, e.g., query HIBP for the latest breaches
             console.log('Updating extension data...');
 
