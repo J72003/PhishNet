@@ -1,106 +1,118 @@
-// ignore_for_file: avoid_web_libraries_in_flutter
-import 'dart:convert';
-import 'dart:html';
-import 'package:http/http.dart' as http;
+import 'dart:io';
 
-// Function to classify breaches into categories
+void main() {
+  stdout.write('Enter email to check: ');
+  var emailToCheck = stdin.readLineSync()!.trim();
+
+  // Simulated test function using the same categorization methods
+  var result = checkEmailTest(emailToCheck);
+
+  if (result['pwned']) {
+    print("Email '$emailToCheck' has been pwned with the following breaches:");
+    print('Critical: ${result['classification']['Critical']}');
+    print('High: ${result['classification']['High']}');
+    print('Medium: ${result['classification']['Medium']}');
+    print('Low: ${result['classification']['Low']}');
+  } else {
+    print("Email '$emailToCheck' has not been pwned.");
+  }
+}
+
 Map<String, List> classifyBreaches(List breaches) {
   var classification = {'Critical': [], 'High': [], 'Medium': [], 'Low': []};
+
+  // Keywords for each category
+  var criticalKeywords = ['Social Security Numbers', 'Credit Card Numbers'];
+  var highKeywords = ['Passwords', 'Physical Addresses'];
+  var mediumKeywords = ['Phone Numbers', 'Employment Information'];
+
+  // Counters for each category
+  var criticalCount = 0;
+  var highCount = 0;
+  var mediumCount = 0;
+  var lowCount = 0;
+
   for (var breach in breaches) {
-    if (breach['dataClasses'] != null) {
-      if (breach['dataClasses'].contains('Social Security Numbers') ||
-          breach['dataClasses'].contains('Credit Card Numbers')) {
+    if (breach['~:DataClasses'] != null) {
+      var dataClasses = List<String>.from(breach['~:DataClasses']);
+
+      if (dataClasses.any((element) => criticalKeywords.contains(element))) {
         classification['Critical']!.add(breach);
-      } else if (breach['dataClasses'].contains('Passwords') ||
-          breach['dataClasses'].contains('Physical Addresses')) {
+        criticalCount++;
+      } else if (dataClasses.any((element) => highKeywords.contains(element))) {
         classification['High']!.add(breach);
-      } else if (breach['dataClasses'].contains('Phone Numbers') ||
-          breach['dataClasses'].contains('Employment Information')) {
+        highCount++;
+      } else if (dataClasses.any((element) => mediumKeywords.contains(element))) {
         classification['Medium']!.add(breach);
+        mediumCount++;
       } else {
         classification['Low']!.add(breach);
+        lowCount++;
       }
     }
   }
+
+  // Add counts to the result
+  classification['Critical']!.insert(0, criticalCount);
+  classification['High']!.insert(0, highCount);
+  classification['Medium']!.insert(0, mediumCount);
+  classification['Low']!.insert(0, lowCount);
+
   return classification;
 }
 
-Future<Map<String, dynamic>> checkEmail(String email) async {
-  var hibpApiKey = '1c79345799354f0c9dc49fe20df74c50';
-  var response = await http.get(
-    Uri.parse('https://haveibeenpwned.com/api/v3/breachedaccount/${Uri.encodeComponent(email)}'),
-    headers: {
-      'hibp-api-key': hibpApiKey,
-      'User-Agent': 'Dart/2.10 (dart:io)',
-    },
-  );
-  if (response.statusCode == 200) {
-    var data = json.decode(response.body);
-    var classification = classifyBreaches(data);
-    return {'pwned': true, 'breaches': data, 'classification': classification};
-  } else if (response.statusCode == 404) {
-    return {'pwned': false, 'breaches': [], 'classification': {}};
-  } else {
-    throw Exception('Error checking email: ${response.reasonPhrase}');
-  }
-}
+String _getHighestPriorityCategory(List<String> breachDataClasses) {
+  var highestPriorityCategory = 'Low';
+  var priorityCategories = ['Critical', 'High', 'Medium', 'Low'];
 
-// Function to get Chrome version
-String getChromeVersion() {
-  var match = RegExp(r'Chrom(e|ium)\/([0-9]+)\.').firstMatch(window.navigator.userAgent);
-  return match != null ? int.parse(match.group(2)!).toString() : 'latest';
-}
-
-// Function to store user information as a token
-Future<void> setToken(Map<String, dynamic> tokenData) async {
-  // Assuming using package like shared_preferences or similar for local storage
-  // SharedPreferences prefs = await SharedPreferences.getInstance();
-  // await prefs.setString('token', json.encode(tokenData));
-}
-
-Future<String> getToken() async {
-  // Assuming using package like shared_preferences or similar for local storage
-  // SharedPreferences prefs = await SharedPreferences.getInstance();
-  // return prefs.getString('token') ?? '';
-  return ''; // Add a return statement here or replace it with a default value.
-}
-
-// Function to validate email format
-bool validateEmail(String email) {
-  var emailRegex = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
-  return emailRegex.hasMatch(email);
-}
-
-// Function to validate date format (YYYY-MM-DD)
-bool validateDateOfBirth(String dob) {
-  var dateRegex = RegExp(r'^\d{4}-\d{2}-\d{2}$');
-  return dateRegex.hasMatch(dob);
-}
-
-// Function to validate phone number format
-bool validatePhoneNumber(String phone) {
-  var phoneRegex = RegExp(r'^\d{10}$'); // Assuming a simple 10-digit phone number
-  return phoneRegex.hasMatch(phone);
-}
-
-//Function to prompt user for settings and store as a token
-Future<void> promptForSettings() async {
-}
-
-void main() {
-  var emailToCheck = 'user@example.com';
-  checkEmail(emailToCheck)
-      .then((result) {
-    if (result['pwned']) {
-      print("Email '$emailToCheck' has been pwned with the following breaches:");
-      print('Critical: ${result['classification']['Critical']}');
-      print('High: ${result['classification']['High']}');
-      print('Medium: ${result['classification']['Medium']}');
-      print('Low: ${result['classification']['Low']}');
-    } else {
-      print("Email '$emailToCheck' has not been pwned.");
+  for (var category in priorityCategories) {
+    if (breachDataClasses.any((word) => _isKeywordForCategory(word, category))) {
+      highestPriorityCategory = category;
+      break;
     }
-  }).catchError((error) {
-    print('Error checking email: $error');
-  });
+  }
+  return highestPriorityCategory;
+}
+
+bool _isKeywordForCategory(String word, String category) {
+  // Define keywords for each category
+  var categoryKeywords = {
+    'Critical': ['social security numbers', 'credit card numbers'],
+    'High': ['passwords', 'physical addresses'],
+    'Medium': ['phone numbers', 'employment information'],
+  };
+
+  return categoryKeywords[category]!.any((keyword) => word.toLowerCase().contains(keyword));
+}
+
+bool _containsKeyword(String text, List<String> keywords) {
+  return keywords.any((keyword) => text.contains(keyword));
+}
+
+// Simulated test function using the same categorization methods
+Map<String, dynamic> checkEmailTest(String email) {
+  // Simulated data to represent the result of the API call
+  var testData = [
+    {
+      '~:DataClasses': ['Social Security Numbers', 'Credit Card Numbers'],
+      '~:Description': 'Breach 1'
+    },
+    {
+      '~:DataClasses': ['Passwords', 'Physical Addresses'],
+      '~:Description': 'Breach 2'
+    },
+    {
+      '~:DataClasses': ['Phone Numbers', 'Employment Information'],
+      '~:Description': 'Breach 3'
+    },
+    {
+      '~:DataClasses': ['Other Data', 'Miscellaneous'],
+      '~:Description': 'Breach 4'
+    },
+  ];
+
+  // Simulating the classification based on keywords
+  var classification = classifyBreaches(testData);
+
+  return {'pwned': true, 'classification': classification};
 }

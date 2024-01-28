@@ -38,4 +38,5 @@ chrome.storage.local.get(["locationId","startDate","endDate"], (result) => {
         endDateElement.value = endDate
     }
 
+    
 })

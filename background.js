@@ -17,4 +17,5 @@ const handleOnStart = (prefs) => {
     console.log("prefs received",prefs)
     chrome.storage.local.set(prefs)
 
+    
 }
