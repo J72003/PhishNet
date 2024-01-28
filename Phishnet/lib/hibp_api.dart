@@ -1,13 +1,18 @@
 import 'dart:io';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 void main() {
   stdout.write('Enter email to check: ');
   var emailToCheck = stdin.readLineSync()!.trim();
 
-  // Simulated test function using the same categorization methods
-  var result = checkEmailTest(emailToCheck);
+  // Replace [YOUR_API_KEY] with your actual API key
+  var apiKey = '[1c79345799354f0c9dc49fe20df74c50]';
 
-  if (result['pwned']) {
+  // Make the API request
+  var result = checkEmailPwned(emailToCheck, apiKey);
+
+  if (result=='pwned') {
     print("Email '$emailToCheck' has been pwned with the following breaches:");
     print('Critical: ${result['classification']['Critical']}');
     print('High: ${result['classification']['High']}');
@@ -18,10 +23,9 @@ void main() {
   }
 }
 
-Map<String, List> classifyBreaches(List breaches) {
+Map<String, dynamic> classifyBreaches(List breaches) {
   var classification = {'Critical': [], 'High': [], 'Medium': [], 'Low': []};
-
-  // Keywords for each category
+  
   var criticalKeywords = ['Social Security Numbers', 'Credit Card Numbers'];
   var highKeywords = ['Passwords', 'Physical Addresses'];
   var mediumKeywords = ['Phone Numbers', 'Employment Information'];
@@ -31,7 +35,6 @@ Map<String, List> classifyBreaches(List breaches) {
   var highCount = 0;
   var mediumCount = 0;
   var lowCount = 0;
-
   for (var breach in breaches) {
     if (breach['~:DataClasses'] != null) {
       var dataClasses = List<String>.from(breach['~:DataClasses']);
@@ -51,68 +54,45 @@ Map<String, List> classifyBreaches(List breaches) {
       }
     }
   }
-
-  // Add counts to the result
+  // Your existing classification logic here...
+   // Add counts to the result
   classification['Critical']!.insert(0, criticalCount);
   classification['High']!.insert(0, highCount);
   classification['Medium']!.insert(0, mediumCount);
   classification['Low']!.insert(0, lowCount);
 
   return classification;
+
 }
 
-String _getHighestPriorityCategory(List<String> breachDataClasses) {
-  var highestPriorityCategory = 'Low';
-  var priorityCategories = ['Critical', 'High', 'Medium', 'Low'];
-
-  for (var category in priorityCategories) {
-    if (breachDataClasses.any((word) => _isKeywordForCategory(word, category))) {
-      highestPriorityCategory = category;
-      break;
-    }
-  }
-  return highestPriorityCategory;
-}
-
-bool _isKeywordForCategory(String word, String category) {
-  // Define keywords for each category
-  var categoryKeywords = {
-    'Critical': ['social security numbers', 'credit card numbers'],
-    'High': ['passwords', 'physical addresses'],
-    'Medium': ['phone numbers', 'employment information'],
+// Function to check if an email has been pwned using the haveibeenpwned API
+Future<Map<String, dynamic>> checkEmailPwned(String email, String apiKey) async {
+  var apiUrl = 'https://haveibeenpwned.com/api/v3/breachedaccount/$email';
+  var headers = {
+    HttpHeaders.authorizationHeader: 'hibp-api-key: $apiKey',
+    HttpHeaders.contentTypeHeader: 'application/json',
   };
 
-  return categoryKeywords[category]!.any((keyword) => word.toLowerCase().contains(keyword));
-}
+  try {
+    // Make the GET request using http package
+    var response = await http.get(Uri.parse(apiUrl), headers: headers);
 
-bool _containsKeyword(String text, List<String> keywords) {
-  return keywords.any((keyword) => text.contains(keyword));
-}
+    if (response.statusCode == 200) {
+      // Parse the response
+      var responseData = json.decode(response.body);
 
-// Simulated test function using the same categorization methods
-Map<String, dynamic> checkEmailTest(String email) {
-  // Simulated data to represent the result of the API call
-  var testData = [
-    {
-      '~:DataClasses': ['Social Security Numbers', 'Credit Card Numbers'],
-      '~:Description': 'Breach 1'
-    },
-    {
-      '~:DataClasses': ['Passwords', 'Physical Addresses'],
-      '~:Description': 'Breach 2'
-    },
-    {
-      '~:DataClasses': ['Phone Numbers', 'Employment Information'],
-      '~:Description': 'Breach 3'
-    },
-    {
-      '~:DataClasses': ['Other Data', 'Miscellaneous'],
-      '~:Description': 'Breach 4'
-    },
-  ];
+      // Simulate the classification based on keywords
+      var classification = classifyBreaches(responseData);
 
-  // Simulating the classification based on keywords
-  var classification = classifyBreaches(testData);
-
-  return {'pwned': true, 'classification': classification};
+      return {'pwned': true, 'classification': classification};
+    } else {
+      // Handle non-200 status codes
+      print('Error: ${response.statusCode} - ${response.reasonPhrase}');
+      return {'pwned': false, 'classification': {}};
+    }
+  } catch (e) {
+    // Handle other errors
+    print('Error: $e');
+    return {'pwned': false, 'classification': {}};
+  }
 }

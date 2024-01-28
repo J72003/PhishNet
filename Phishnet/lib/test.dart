@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:http/http.dart' as http;
 
 Map<String, List<String>> classifyBreaches(List<dynamic> breaches) {
@@ -68,7 +67,7 @@ Future<Map<String, dynamic>> checkEmail(String email) async {
 }
 
 void main() async {
-  var userEmail = 'derekortiz005@gmail.com'; // Replace with the desired email
+  var userEmail = 'nzulu11@gmail.com'; // Replace with the desired email
   var result = await checkEmail(userEmail);
 
   if (result['pwned']) {
