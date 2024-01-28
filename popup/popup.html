@@ -4,13 +4,72 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PhisNet</title>
-    <link rel="stylesheet" href="bulma.min.css" />
+    <link rel="stylesheet" href="bulma.min.css"/>
+
+
+
 </head>
 <body>
-    
+
     <div class="container">
-        <h1 class ="title">PhisNet</h1>
+
+        <h1 class="title">PhisNet</h1>
+
+
+        <div class="field">
+            <label class="label">Status</label>
+            <span class ="tag is-success">Running</span>
+            <span class="tag is-danger">Stopped</span>
+
+
+        </div>
+
     </div>
 
+    <div class="container">
+        <div class="field">
+            <label class = "label">Location ID</label>
+            <div class = "select">
+                <select id="locationId">
+                    <option value="los_angeles">Los Angeles</option>
+                    <option value="seattle">Seattle</option>
+                </select>
+
+            </div>
+        </div>
+
+        <div class="field">
+
+            <label class="label">Start Date</label>
+            <div class="control">
+                <input type="date" class="input" id="startDate">
+            </div>
+        </div>
+
+
+        <div class="field">
+            
+            <label class="label">End Date</label>
+            <div class="control">
+                <input type="date" class="input" id="endDate">
+            </div>
+
+
+        </div>
+
+    </div>
+
+    <div class="container m-3">
+        <button class="button is-success is-fullwidth" id="startButton">ENTER</button>
+    </div>
+
+    <div class="container m-3">
+        <button class="button is-danger is-fullwidth" id="endButton">Stop</button>
+    </div>
+
+    
 </body>
+
+<script src="popup.js"></script>
+
 </html>
