@@ -1,0 +1,12 @@
+html, body {
+    /* width: 100%;
+    height: 100%; */
+    background: -webkit-linear-gradient(25deg, #0a69c9, #11b5d2, #ff0059, #8338EC, #ff3a4a);
+
+    display: center;
+    justify-content: center;
+    align-items: center;
+}
+
+
+
