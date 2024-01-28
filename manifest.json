@@ -1,0 +1,21 @@
+{
+    "manifest_version": 3,
+    "name": "PhisNet",
+    "description": "Find phishing attempts and warn the client",
+    "version": "1.0",
+    "action": {
+        "default_pop": "popup/popup.html"
+    },
+    "icons": {
+        "1": "images/lock.png",
+        "2": "images/unlock.png"
+    },
+    "background":{
+        "service_worker": "background.js",
+        "type": "module"
+    },
+    "permissions": [
+        "storage"
+    ]
+   
+}
