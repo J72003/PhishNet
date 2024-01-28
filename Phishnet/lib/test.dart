@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'dart:js' as js;
 
 Map<String, List<String>> classifyBreaches(List<dynamic> breaches) {
   var classification = {'Critical': [], 'High': [], 'Medium': [], 'Low': []};
@@ -39,6 +40,10 @@ bool _isKeywordForCategory(String breach, String category) {
   return categoryKeywords[category]!.any((keyword) => breach.contains(keyword));
 }
 
+void sendBreachesToBackground(Map<String, dynamic> result) {
+  js.context['chrome']['runtime'].callMethod('sendMessage', [{'type': 'breaches', 'data': result}]);
+}
+
 Future<Map<String, dynamic>> checkEmail(String email) async {
   const apiKey = '1c79345799354f0c9dc49fe20df74c50';
 
@@ -54,15 +59,21 @@ Future<Map<String, dynamic>> checkEmail(String email) async {
     if (response.statusCode == 200) {
       var data = json.decode(response.body);
       var classification = classifyBreaches(data);
-      return {'pwned': true, 'classification': classification};
+      var result = {'pwned': true, 'classification': classification};
+      sendBreachesToBackground(result);
+      return result;
     } else if (response.statusCode == 404) {
-      return {'pwned': false, 'classification': {}};
+      var result = {'pwned': false, 'classification': {}};
+      sendBreachesToBackground(result);
+      return result;
     } else {
       throw Exception('Error checking email: ${response.reasonPhrase}');
     }
   } catch (error) {
     print('Error checking email: $error');
-    return {'pwned': false, 'classification': {}};
+    var result = {'pwned': false, 'classification': {}};
+    sendBreachesToBackground(result);
+    return result;
   }
 }
 
