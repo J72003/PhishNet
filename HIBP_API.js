@@ -1,3 +1,22 @@
+//Function to classify breaches into categories
+const classifyBreaches = (breaches) => {
+    const classification = { Critical: [], High: [], Medium: [], Low: [] };
+
+    breaches.forEach(breach => {
+        if (breach.dataClasses.includes('Social Security Numbers') || breach.dataClasses.includes('Credit Card Numbers')) {
+            classification.Critical.push(breach);
+        } else if (breach.dataClasses.includes('Passwords') || breach.dataClasses.includes('Physical Addresses')) {
+            classification.High.push(breach);
+        } else if (breach.dataClasses.includes('Phone Numbers') || breach.dataClasses.includes('Employment Information')) {
+            classification.Medium.push(breach);
+        } else {
+            classification.Low.push(breach);
+        }
+    });
+
+    return classification;
+};
+
 const sha256 = async function (input) {
     const encoder = new TextEncoder();
     const data = encoder.encode(input);
@@ -10,18 +29,21 @@ const sha256 = async function (input) {
 const checkEmail = async function (email) {
     const hashedEmail = await sha256(email.toLowerCase());
 
+    const hibpApiKey = '1c79345799354f0c9dc49fe20df74c50';
+
     const response = await fetch(`https://haveibeenpwned.com/api/v3/breachedaccount/${encodeURIComponent(email)}`, {
         headers: {
-            'hibp-api-key': '1c79345799354f0c9dc49fe20df74c50', 
+            'hibp-api-key': hibpApiKey, 
             'User-Agent': `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${await getChromeVersion()} Safari/537.36`,
         },
     });
 
     if (response.ok) {
         const data = await response.json();
-        return { pwned: true, breaches: data };
+        const classification = classifyBreaches(data);
+        return { pwned: true, breaches: data, classification };
     } else if (response.status === 404) {
-        return { pwned: false, breaches: [] };
+        return { pwned: false, breaches: [], classification: {} };
     } else {
         throw new Error(`Error checking email: ${response.statusText}`);
     }
@@ -33,36 +55,72 @@ const getChromeVersion = () => {
     return match ? parseInt(match[2], 10).toString() : 'latest';
 };
 
-//Function to trigger an update
-const updateExtensionData = async () => {
-
-    //Get the last update time from local storage
-    chrome.storage.local.get(['lastUpdateTime'], async function(result) {
-        const lastUpdateTime = result.lastUpdateTime;
-        
-        //Check if enough time has passed since the last update (e.g., 24 hours)
-        const hoursBetweenUpdates = 24;
-        const now = new Date().getTime();
-        const timeSinceLastUpdate = now - new Date(lastUpdateTime).getTime();
-
-        if (isNaN(timeSinceLastUpdate) || timeSinceLastUpdate >= hoursBetweenUpdates * 60 * 60 * 1000) {
-            
-            //Perform actions to update extension data, e.g., query HIBP for the latest breaches
-            console.log('Updating extension data...');
-
-            //Store the current time as the last update time
-            chrome.storage.local.set({ lastUpdateTime: new Date().toISOString() });
-
-            //Example: query HIBP for a specific email after updating
-            const emailToCheck = 'user@example.com';
-            const result = await checkEmail(emailToCheck);
-
-            console.log(`Result after update for email '${emailToCheck}':`, result);
-        } else {
-            console.log('Not enough time has passed since the last update.');
-        }
+//Function to store user information as a token
+const setToken = async (tokenData) => {
+    return new Promise(resolve => {
+        chrome.storage.local.set({ token: tokenData }, resolve);
     });
 };
+
+//Function to retrieve the stored token
+const getToken = async () => {
+    return new Promise(resolve => {
+        chrome.storage.local.get(['token'], result => {
+            resolve(result.token || '');
+        });
+    });
+};
+
+//Function to validate email format
+const validateEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+};
+
+//Function to validate date format (YYYY-MM-DD)
+const validateDateOfBirth = (dob) => {
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    return dateRegex.test(dob);
+};
+
+//Function to validate phone number format
+const validatePhoneNumber = (phone) => {
+    const phoneRegex = /^\d{10}$/; // Assuming a simple 10-digit phone number
+    return phoneRegex.test(phone);
+};
+
+//Function to prompt user for settings and store as a token
+const promptForSettings = async () => {
+    let email, name, dob, phone;
+
+    do {
+        email = prompt('Enter your email:');
+    } while (!validateEmail(email));
+
+    do {
+        name = prompt('Enter your name:');
+    } while (!name.trim());
+
+    do {
+        dob = prompt('Enter your date of birth (YYYY-MM-DD):');
+    } while (!validateDateOfBirth(dob));
+
+    do {
+        phone = prompt('Enter your phone number:');
+    } while (!validatePhoneNumber(phone));
+
+    const tokenData = {
+        email,
+        name,
+        dob,
+        phone,
+    };
+
+    await setToken(tokenData);
+};
+
+//Example usage to prompt user for settings
+promptForSettings();
 
 //Example usage to trigger an update
 updateExtensionData();
@@ -73,7 +131,11 @@ const emailToCheck = 'user@example.com';
 checkEmail(emailToCheck)
     .then(result => {
         if (result.pwned) {
-            console.log(`Email '${emailToCheck}' has been pwned in the following breaches:`, result.breaches);
+            console.log(`Email '${emailToCheck}' has been pwned with the following breaches:`);
+            console.log('Critical:', result.classification.Critical);
+            console.log('High:', result.classification.High);
+            console.log('Medium:', result.classification.Medium);
+            console.log('Low:', result.classification.Low);
         } else {
             console.log(`Email '${emailToCheck}' has not been pwned.`);
         }
