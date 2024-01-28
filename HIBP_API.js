@@ -33,7 +33,40 @@ const getChromeVersion = () => {
     return match ? parseInt(match[2], 10).toString() : 'latest';
 };
 
-//Example usage
+//Function to trigger an update
+const updateExtensionData = async () => {
+
+    //Get the last update time from local storage
+    chrome.storage.local.get(['lastUpdateTime'], async function(result) {
+        const lastUpdateTime = result.lastUpdateTime;
+        
+        //Check if enough time has passed since the last update (e.g., 24 hours)
+        const hoursBetweenUpdates = 24;
+        const now = new Date().getTime();
+        const timeSinceLastUpdate = now - new Date(lastUpdateTime).getTime();
+
+        if (isNaN(timeSinceLastUpdate) || timeSinceLastUpdate >= hoursBetweenUpdates * 60 * 60 * 1000) {
+            //Perform actions to update extension data, e.g., query HIBP for the latest breaches
+            console.log('Updating extension data...');
+
+            //Store the current time as the last update time
+            chrome.storage.local.set({ lastUpdateTime: new Date().toISOString() });
+
+            //Example: query HIBP for a specific email after updating
+            const emailToCheck = 'user@example.com';
+            const result = await checkEmail(emailToCheck);
+
+            console.log(`Result after update for email '${emailToCheck}':`, result);
+        } else {
+            console.log('Not enough time has passed since the last update.');
+        }
+    });
+};
+
+//Example usage to trigger an update
+updateExtensionData();
+
+//Example usage to check email (unrelated to the update)
 const emailToCheck = 'user@example.com';
 
 checkEmail(emailToCheck)
